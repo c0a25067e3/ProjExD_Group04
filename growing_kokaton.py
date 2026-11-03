@@ -136,6 +136,15 @@ class Bird:
         screen.blit(draw_img, draw_rct)
 
 
+class Feeding:
+    def __init__(self):
+        """
+        こうかとんに餌やりをするクラス(追加機能)
+        """
+        self.feed = 0 #与える餌初期設定
+
+
+
 class StatusDisplay:
     """
     体力バー、残り寿命、ステータス描画クラス
@@ -143,7 +152,7 @@ class StatusDisplay:
     def __init__(self):
         self.font = pg.font.Font(None, 36)
 
-    def update(self, screen: pg.Surface, bird: Bird, elapsed_sec: float):
+    def update(self, screen: pg.Surface, bird: Bird, elapsed_sec: float, feeding: Feeding):
         # 1. 体力バー描画
         bar_x, bar_y = 20, 20
         bar_width, bar_height = 300, 25
@@ -173,6 +182,10 @@ class StatusDisplay:
         life_text = self.font.render(f"Lifespan: {minutes:02d}:{seconds:02d}", True, (255, 255, 255))
         screen.blit(life_text, (WIDTH - 220, 20))
 
+        #体力バーの横に与える餌の数を表示(追加機能)
+        feed_text = self.font.render(f"Feed:{feeding.feed}", True, (255, 255, 255))
+        screen.blit(feed_text, (bar_x + 350, bar_y + 5)) 
+
 
 def main():
     pg.display.set_caption("こうかとん育成ゲーム（基本機能）")
@@ -182,6 +195,7 @@ def main():
     bird = Bird((WIDTH // 2, HEIGHT // 2))
     status_disp = StatusDisplay()
     clock = pg.time.Clock()
+    feeding = Feeding()
 
     start_time = time.time()
     last_hp_decay_time = time.time()
@@ -194,6 +208,20 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
+            if event.type == pg.KEYDOWN and event.key == pg.K_f: 
+                if bird.hp <= 300:
+                    if 300-bird.hp >= feeding.feed:
+                        bird.hp += feeding.feed #Fキーを押すと体力が餌の数だけ回復
+                                                #所持している食料の数が減る(関数が分かってから記入)
+                                                #食料の所持数が分かったら、所持数より上の数は与えられないように設定
+
+            if event.type == pg.KEYDOWN and event.key == pg.K_UP:
+                feeding.feed += 1 #上キーを押すと与える餌の数が1増える
+                # if feeding.feed == "所持している食材の量":
+                #     feeding.feed += 0 #与える餌の数値が所持している食料の数値と同じだった場合、数値は上がらない
+            if event.type == pg.KEYDOWN and event.key == pg.K_DOWN:
+                feeding.feed -= 1 #下キーを押すと与える餌の数が1減る
+
 
         # --- 1秒ごとに体力を減算 ---
         if current_time - last_hp_decay_time >= 1.0:
@@ -213,7 +241,7 @@ def main():
         # 描画更新
         screen.blit(bg_img, [0, 0])
         bird.update(screen)
-        status_disp.update(screen, bird, elapsed_sec)
+        status_disp.update(screen, bird, elapsed_sec, feeding)
 
         pg.display.update()
         clock.tick(FPS)
