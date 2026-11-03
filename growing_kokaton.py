@@ -31,25 +31,32 @@ class Bird:
     """
     ゲームキャラクター（こうかとん）に関するクラス
     """
-    img0 = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
+    img0 = pg.transform.rotozoom(pg.image.load("fig/5.png"), 0, 0.9)
     img = pg.transform.flip(img0, True, False)  # デフォルトのこうかとん（右向き）
     imgs = {  # 0度から反時計回りに定義
-        (+5, 0): img,
-        (+5, -5): pg.transform.rotozoom(img, 45, 0.9),
-        (0, -5): pg.transform.rotozoom(img, 90, 0.9),
-        (-5, -5): pg.transform.rotozoom(img0, -45, 0.9),
-        (-5, 0): img0,
-        (-5, +5): pg.transform.rotozoom(img0, 45, 0.9),
-        (0, +5): pg.transform.rotozoom(img, -90, 0.9),
-        (+5, +5): pg.transform.rotozoom(img, -45, 0.9),
+            (+5, 0): img,
+            (+5, -5): pg.transform.rotozoom(img, 45, 0.9),
+            (0, -5): pg.transform.rotozoom(img, 90, 0.9),
+            (-5, -5): pg.transform.rotozoom(img0, -45, 0.9),
+            (-5, 0): img0,
+            (-5, +5): pg.transform.rotozoom(img0, 45, 0.9),
+            (0, +5): pg.transform.rotozoom(img, -90, 0.9),
+            (+5, +5): pg.transform.rotozoom(img, -45, 0.9),
     }
+
 
     def __init__(self, xy: tuple[int, int]):
         """
         こうかとん初期化
         引数 xy：初期位置座標タプル
         """
-        self.img = __class__.imgs[(+5, 0)]
+        # --- 行動パラメータ ---
+        self.state: str = "WALK" # "WALK" または "FLY"
+        self.state_timer: int = 0
+        self.move_vec: list[int] = [0, 0]
+        self.change_dir_interval: int = 50  # 方向転換の間隔（フレーム数）
+
+        self.img = __class__.imgs[(+5, 0)]  # 初期画像（右向き）
         self.rct: pg.Rect = self.img.get_rect()
         self.rct.center = xy
         self.dire = (+5, 0)
@@ -59,28 +66,26 @@ class Bird:
         self.max_hp: int = 300   # 最大体力
         self.is_alive: bool = True
 
-        # --- 行動パラメータ ---
-        self.state: str = "WALK" # "WALK" または "FLY"
-        self.state_timer: int = 0
-        self.move_vec: list[int] = [0, 0]
-        self.change_dir_interval: int = 50  # 方向転換の間隔（フレーム数）
+
 
     def change_img(self, num: int, screen: pg.Surface):
         """こうかとん画像を切り替え，画面に転送する"""
         self.img = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.9)
         screen.blit(self.img, self.rct)
 
-    def update_behavior(self):
+    def update_behavior(self, screen: pg.Surface):
         """ランダムな歩行と時々行う飛行の挙動制御"""
         self.state_timer += 1
 
         # 一定確率で飛行モードと歩行モードの切り替え
         if self.state == "WALK":
             if random.random() < 0.005:  # 約0.5%の確率で飛行開始
+                self.change_img(3, screen)
                 self.state = "FLY"
                 self.state_timer = 0
         elif self.state == "FLY":
             if self.state_timer > 150:   # 3秒間（150フレーム）飛んだら歩行に戻る
+                self.change_img(5, screen)
                 self.state = "WALK"
                 self.state_timer = 0
 
@@ -104,7 +109,7 @@ class Bird:
 
     def update(self, screen: pg.Surface):
         """位置更新・描画"""
-        self.update_behavior()
+        self.update_behavior(screen)
 
         # 移動適用
         self.rct.move_ip(self.move_vec)
@@ -126,14 +131,9 @@ class Bird:
             if (vx, vy) in __class__.imgs:
                 self.img = __class__.imgs[(vx, vy)]
 
-        # 飛行時は少し拡大・浮上表現のエフェクト
-        draw_img = self.img
-        draw_rct = self.rct.copy()
-        if self.state == "FLY":
-            draw_img = pg.transform.rotozoom(self.img, 0, 1.1)
-            draw_rct.centery -= 10  # 少し浮かす
 
-        screen.blit(draw_img, draw_rct)
+
+        screen.blit(self.img, self.rct)
 
 
 class StatusDisplay:
@@ -183,6 +183,8 @@ def main():
     status_disp = StatusDisplay()
     clock = pg.time.Clock()
 
+    spawn_egg = 1  # こうかとんの再生成回数
+
     start_time = time.time()
     last_hp_decay_time = time.time()
 
@@ -195,6 +197,7 @@ def main():
             if event.type == pg.QUIT:
                 return
 
+
         # --- 1秒ごとに体力を減算 ---
         if current_time - last_hp_decay_time >= 1.0:
             bird.consume_hp()
@@ -202,19 +205,30 @@ def main():
 
         # --- ゲームオーバー・寿命判定 ---
         if not bird.is_alive or elapsed_sec >= MAX_LIFESPAN_SEC:
-            font_big = pg.font.Font(None, 80)
-            reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
-            txt = font_big.render(f"Game Over ({reason})", True, (255, 0, 0))
-            screen.blit(txt, (WIDTH // 2 - 350, HEIGHT // 2))
-            pg.display.update()
-            time.sleep(2)
-            return
+            if spawn_egg > 0:  # こうかとんを再生成する
+                font_birth = pg.font.Font(None, 80)
+                txt = font_birth.render(f"Kokaton.Jr was born", True, (255, 0, 0))
+                screen.blit(txt, (WIDTH // 2 - 350, HEIGHT // 2))
+                pg.display.update()
+                bird = Bird((WIDTH // 2, HEIGHT // 2))  # 新しいこうかとんを生成
+                time.sleep(2)
+                spawn_egg -= 1
+            else:
+                font_big = pg.font.Font(None, 80)
+                reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
+                txt = font_big.render(f"Game Over ({reason})", True, (255, 0, 0))
+                screen.blit(txt, (WIDTH // 2 - 350, HEIGHT // 2))
+                pg.display.update()
+                time.sleep(2)
+                return
+
 
         # 描画更新
         screen.blit(bg_img, [0, 0])
-        bird.update(screen)
         status_disp.update(screen, bird, elapsed_sec)
-
+        bird.update(screen)
+        
+        print(bird.state, bird.hp, bird.img)  # デバッグ用に状態と体力を出力
         pg.display.update()
         clock.tick(FPS)
 
