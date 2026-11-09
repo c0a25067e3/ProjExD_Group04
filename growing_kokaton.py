@@ -14,7 +14,7 @@ MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 EGG_TYPES = 6   # 卵の種類数
 EGG_INTERVAL = 15   # 卵の出現頻度
 EGG_LIFESPAN = 7   # 卵の消滅までの時間(GAMEOVER)
-EGG_GOLD_PROBABILITY = 0.1   # 金の卵の出現確率
+EGG_GOLD_PROBABILITY = 0.01   # 金の卵の出現確率
 # ===== ↑ミニゲーム =====
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -62,7 +62,7 @@ class Bird:
         self.dire = (+5, 0)
         
         # --- 体力と寿命パラメータ ---
-        self.hp: int = 600        # 初期体力
+        self.hp: int = 80       # 初期体力
         self.max_hp: int = 300   # 最大体力
         self.is_alive: bool = True
 
