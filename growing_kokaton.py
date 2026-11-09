@@ -209,6 +209,8 @@ class Cook():
         self.is_cooking = False  # 実際に調理しているか？
         self.is_select = True  # 料理の種類を選択しているか？
         self.is_select_egg = False  # 卵の種類を選択しているか？
+        self.is_confirm_nxegg = False  # 次世代卵を使用するか確認画面を表示しているか？
+        self.is_confirm_nxegg_select = 0  # yes,noのどちらを選択しているか管理 0:Yes(使用する) 1:No(使用しない)
         self.no_egg_messe = ""  # 卵がない時に画面に表示するメッセージ
         self.is_exp = False  # 爆発したか？
         self.is_hit = False  # こうかとんと爆弾が衝突したか？
@@ -288,8 +290,8 @@ class Cook():
             text_rct = text.get_rect(center=(WIDTH//2, 100))
             screen.blit(text, text_rct)
 
-            for i, e in enumerate(self.li_egg):
-                if i == self.type_egg:  # 選択されている選択肢だけ色を変える
+            for i, e in enumerate(self.li_egg):  # 選択されている選択肢だけ色を変える処理
+                if i == self.type_egg:
                     color = (255, 255, 0)
                 else:
                     color = (255, 255, 255)
@@ -297,6 +299,26 @@ class Cook():
                 text = self.font.render(e, True, color)
                 text_rct = text.get_rect(center=(WIDTH//2, 200 + i * 100))
                 screen.blit(text, text_rct)
+            return
+
+        # ---次世代卵を使用するか確認する処理---
+        elif self.is_confirm_nxegg:  # 次世代卵を使用するか確認画面の場合(料理機能で追加)
+            text = self.font.render("Hontou ni tukau?", True, (255, 255, 255))
+            text_rct = text.get_rect(center=(WIDTH//2, 150))
+            screen.blit(text, text_rct)
+
+            confirm_list = ["Yes", "No"]  # 確認するためのリスト
+
+            for i, ans in enumerate(confirm_list):  # 色変えるための処理
+                if i == self.is_confirm_nxegg_select:
+                    color = (255, 255, 0)
+                else:
+                    color = (255, 255, 255)
+
+                text = self.font.render(ans, True, color)
+                text_rct = text.get_rect(center=(WIDTH//2, 300 + i * 100))
+                screen.blit(text, text_rct)
+            
             return
 
         # ---からあげが選ばれた時の処理---
@@ -560,9 +582,28 @@ def main():
                         if cook.type_egg == 0:
                             cook.egg -= 50  # 通常卵の所次数を50減らす
                         else:
-                            cook.next_egg -= 1  # 次世代卵の所次数を1減らす
+                            cook.is_confirm_nxegg = True  # 本当に使用するか確認する画面表示
+                            cook.is_confirm_nxegg_select = 0  # 初期設定をyesに設定
                     
                         cook.is_select_egg = False  # 卵選択画面を閉じる
+
+                # ---次世代卵を使用するか確認する処理---
+                elif cook.is_confirm_nxegg:  # 次世代卵を使用するか確認する画面が表示されている場合
+                    # ---選択する処理---
+                    if event.key == pg.K_UP or event.key == pg.K_DOWN:
+                        if cook.is_confirm_nxegg_select == 0:
+                            cook.is_confirm_nxegg_select = 1
+                        else:
+                            cook.is_confirm_nxegg_select = 0
+
+                    # ---選択後の処理---
+                    if event.key == pg.K_RETURN:
+                        if cook.is_confirm_nxegg_select == 0:
+                            cook.next_egg -= 1
+                        else:
+                            cook.is_select = True
+                        cook.is_select_egg = False  # 卵の選択終了
+                        cook.is_confirm_nxegg = False  # 選択する画面を終了
 
                 # ---料理を選択する処理---
                 elif cook.is_cooking and cook.is_select:  # 料理モードand料理選択画面が表示されている場合
