@@ -368,7 +368,7 @@ def main():
 
     start_time = time.time()
     last_hp_decay_time = time.time()
-    three_time = 180 #3分経過を計る
+    three_time = 1 #3分経過を計る
     sleep_check = False  #sキーが押されたかどうか
     sleep_select = 0  #0：”Yse”ボタンを選択
 
