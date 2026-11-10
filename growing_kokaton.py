@@ -173,6 +173,59 @@ class StatusDisplay:
         life_text = self.font.render(f"Lifespan: {minutes:02d}:{seconds:02d}", True, (255, 255, 255))
         screen.blit(life_text, (WIDTH - 220, 20))
 
+class Sleep:
+    
+    def sleep(self, screen: pg.Surface, bird: Bird):  #背景を変更し睡眠をとる
+        back_image = pg.image.load("back_sleepfig/eveningsky.png")  #背景を夕方に変更する
+        screen.blit(back_image, (0, 0))
+        fonto = pg.font.Font(None,80)
+        txt = fonto.render("Koukaton is sleeping.", True, (255, 255, 255))
+        screen.blit(txt, [250, 250])
+        pg.display.update()
+        time.sleep(3)
+            
+        back_image = pg.image.load("back_sleepfig/nightsky.png")  #背景を夜に変更する
+        screen.blit(back_image, (0, 0))
+        fonto = pg.font.Font(None,80)
+        txt = fonto.render("Koukaton is sleeping...", True, (255, 255, 255))
+        screen.blit(txt, [250, 250])
+        pg.display.update()
+        time.sleep(4)
+        
+        back_image = pg.image.load("back_sleepfig/morningsky.png")  #背景を朝に変更する
+        screen.blit(back_image, (0, 0))
+        fonto = pg.font.Font(None,80)
+        txt = fonto.render("Koukaton woke up ...", True, (255, 255, 255))
+        screen.blit(txt, [250, 250])
+        pg.display.update()
+        time.sleep(3)  #各背景時間を合わせて10秒
+
+        if bird.hp >= 270:
+            bird.hp = 300
+        else:
+            bird.hp += 30  #hpに30秒加える
+
+    def update(self, screen : pg.Surface, sleep_check, sleep_select):  #画面表示をする
+        if sleep_check == True:
+            fonto = pg.font.Font(None,70)
+            txt_Question = fonto.render("Do you want to get some sleep?", True, (0, 191, 255))
+            txt1 = txt_Question.get_rect(center = (WIDTH/2, 150))
+            txt_Decision = fonto.render("up_key/douwn_key/enter_key", True, (0, 191, 255))
+            txt2 = txt_Decision.get_rect(center = (WIDTH/2, 200))
+            screen.blit(txt_Question, txt1)
+            screen.blit(txt_Decision, txt2)
+
+            if sleep_select == 0:  #"Yes"が選択されている場合
+                txt_Answer1 = fonto.render("Yes", True, (128, 128, 128))
+                txt_Answer2 = fonto.render(" No", True, (255, 255, 255))
+                
+            elif sleep_select == 1:  #"No"が選択されている場合
+                txt_Answer1 = fonto.render("Yes", True, (255, 255, 255))
+                txt_Answer2 = fonto.render(" No", True, (128, 128, 128))
+            txt3 = txt_Answer1.get_rect(center = (WIDTH/2, 350))
+            txt4 = txt_Answer1.get_rect(center = (WIDTH/2, 450))
+            screen.blit(txt_Answer1, txt3)
+            screen.blit(txt_Answer2, txt4)
 
 def main():
     pg.display.set_caption("こうかとん育成ゲーム（基本機能）")
@@ -181,10 +234,14 @@ def main():
     
     bird = Bird((WIDTH // 2, HEIGHT // 2))
     status_disp = StatusDisplay()
+    sleep_choice = Sleep()  #Sleepクラスの呼び出し
     clock = pg.time.Clock()
 
     start_time = time.time()
     last_hp_decay_time = time.time()
+    three_time = 180 #3分経過を計る
+    sleep_check = False  #sキーが押されたかどうか
+    sleep_select = 0  #0：”Yse”ボタンを選択
 
     while True:
         current_time = time.time()
@@ -194,6 +251,21 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
+            #sキーが押されたとき選択画面を表示
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_s and elapsed_sec >= three_time:  #sキーが押されたかつ既定の時間を超えたとき
+                    sleep_check = True
+                    sleep_select = 0
+                elif sleep_check == True and event.key == pg.K_UP:  #sキーが押されてかつ上キーが押されたとき
+                    sleep_select = 0
+                elif sleep_check == True and event.key == pg.K_DOWN:  #sキーが押されてかつ下キーが押されたとき
+                    sleep_select = 1
+                elif sleep_check == True and event.key == pg.K_RETURN:  #sキーが押されてかつenterキーが押されたとき
+                    if sleep_select == 0:
+                        sleep_choice.sleep(screen, bird)  #睡眠プログラムを動かす
+                        three_time = elapsed_sec + 180
+                    sleep_check = False
+                    
 
         # --- 1秒ごとに体力を減算 ---
         if current_time - last_hp_decay_time >= 1.0:
@@ -214,6 +286,7 @@ def main():
         screen.blit(bg_img, [0, 0])
         bird.update(screen)
         status_disp.update(screen, bird, elapsed_sec)
+        sleep_choice.update(screen, sleep_check, sleep_select)
 
         pg.display.update()
         clock.tick(FPS)
