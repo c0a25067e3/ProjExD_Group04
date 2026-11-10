@@ -11,6 +11,7 @@ FPS = 50      # フレームレート
 MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+pg.mixer.init()  # 音声の初期化
 
 
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
@@ -249,6 +250,10 @@ class Cook():
         self.is_mouse = False  # マウスで画像を掴んでいるか？
         self.item = None  # 掴んでいる画像の種類
 
+        self.fin_sound = pg.mixer.Sound("mp/きらきら輝く3.mp3")
+        self.st_sound = pg.mixer.Sound("mp/「どう料理してやろうかのう」.mp3")
+        self.cook_sound = "mp/3分クッキング.mp3"
+
         # ---当たり判定の取得---
         self.rct_kona = self.cook_img[1].get_rect(center=(WIDTH//2, HEIGHT//2))  # 小麦粉の中心座標を指定して位置決定
         self.rct_oil = self.cook_img[2].get_rect(center=(WIDTH//2, HEIGHT//2))  # 油の中心座標を指定して位置決定
@@ -468,7 +473,9 @@ class Cook():
                         if bird.rct.colliderect(self.rct_oil):  # こうかとんと油が重なっていた場合
                             self.k_step = 2
                             bird.rct.center = self.rct_oil.center  # こうかとんの中心座標を油の中心座標に変更
-                            bird.is_inho = True  # こうかとんがフライパンに入っている状態に変更尾
+                            bird.is_inho = True  # こうかとんがフライパンに入っている状態に変更
+                            self.fin_sound.play()  # 完成した時の音を流す
+                            pg.mixer.music.stop()  # BGMを止める
                     if self.select == 1:  # 親子丼のとき
                         if bird.rct.colliderect(self.rct_h):  # こうかとんとフライパンが重なっていた場合
                             self.k_step = 1
@@ -514,7 +521,10 @@ def main():
     pg.display.set_caption("こうかとん育成ゲーム（基本機能）")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")
-    
+    cook_icon = pg.image.load("fig/cookアイコン.png")  # 料理アイコン(料理機能で追加)
+    sleep_icon = pg.image.load("fig/sleepアイコン.png")  # 睡眠アイコン
+    food_icon = pg.image.load("fig/エサやりアイコン.png")  # エサやりアイコン
+ 
     bird = Bird((WIDTH // 2, HEIGHT // 2))
     status_disp = StatusDisplay()
     clock = pg.time.Clock()
@@ -557,6 +567,7 @@ def main():
                     # ---料理するか選択後の処理---
                     elif event.key == pg.K_RETURN:  # enterが押された場合
                         if cook.confirm_select == 0:  # 料理する(yesだった)場合
+                            cook.st_sound.play()  # 「どう料理してやろうかのう.mp3」を流す
                             bird.is_cooked_once = True  # こうかとんが一度料理されたことを記録
                             cook.is_confirm = False  # 確認画面を終了
                             cook.is_cooking = True  # 料理モードを開始する
@@ -581,6 +592,8 @@ def main():
                     elif event.key == pg.K_RETURN:  # enterが押された場合
                         if cook.type_egg == 0:
                             cook.egg -= 50  # 通常卵の所次数を50減らす
+                            pg.mixer.music.load(cook.cook_sound)
+                            pg.mixer.music.play(loops=-1)
                         else:
                             cook.is_confirm_nxegg = True  # 本当に使用するか確認する画面表示
                             cook.is_confirm_nxegg_select = 0  # 初期設定をyesに設定
@@ -600,6 +613,8 @@ def main():
                     if event.key == pg.K_RETURN:
                         if cook.is_confirm_nxegg_select == 0:
                             cook.next_egg -= 1
+                            pg.mixer.music.load(cook.cook_sound)
+                            pg.mixer.music.play(loops=-1)
                         else:
                             cook.is_select = True
                         cook.is_select_egg = False  # 卵の選択終了
@@ -622,6 +637,10 @@ def main():
                             bird.is_inho = False  # こうかとんがフライパンに入っている状態の解除
                             bird.is_grabbed = False  # こうかとんが自由に動き回るようにする
                             cook.is_select = False  # 料理選択画面の終了
+
+                            pg.mixer.music.load(cook.cook_sound)  # 3分クッキングの音源取得
+                            pg.mixer.music.play(loops=-1)  # ループ再生
+
 
                         # ---親子丼のとき---
                         elif cook.select == 1:
@@ -647,6 +666,8 @@ def main():
                             bird.is_baku = False  # こうかとんが爆発した状態の解除
                             cook.is_exp = False  # expの表示を解除
                             cook.is_select = False  # 料理選択画面の終了
+                            pg.mixer.music.load(cook.cook_sound)  # 3分クッキングの音源取得
+                            pg.mixer.music.play(loops=-1)  # ループ再生
 
                 # ---次の工程へ進む処理---
                 elif cook.is_cooking and not cook.is_select:  # 料理中かつ選択が終了している場合
@@ -660,6 +681,8 @@ def main():
                         elif cook.select == 1:
                             if cook.k_step == 2:  # 工程3の場合
                                 cook.next_step()  # 次の工程へ進む
+                                cook.fin_sound.play()  # 完成した時の音楽を流す
+                                pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 3:
                                 cook.is_cooking = False  # 料理を終了
 
@@ -667,6 +690,8 @@ def main():
                         elif cook.select == 2:
                             if cook.k_step == 1:  # 工程2の場合
                                 cook.next_step()  # 次の工程へ進む
+                                cook.fin_sound.play()  # 完成した時の音楽を流す
+                                pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 2:
                                 cook.is_cooking = False  # 料理を終了
 
@@ -702,6 +727,9 @@ def main():
         else:
             screen.blit(bg_img, [0, 0])
             bird.update(screen)
+            screen.blit(cook_icon, (WIDTH-100, HEIGHT-100))
+            screen.blit(sleep_icon, (WIDTH-200, HEIGHT-100))
+            screen.blit(food_icon, (WIDTH-300, HEIGHT-100))
 
             if cook.is_confirm:  # 本当に料理するか確認画面の場合(料理機能で追加)
                 text = cook.font.render("Hontou ni suru?", True, (255, 255, 255))
