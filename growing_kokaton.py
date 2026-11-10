@@ -124,7 +124,7 @@ class Bird:
         self.dire = (+5, 0)
         
         # --- 体力と寿命パラメータ ---
-        self.hp: int = 5        # 初期体力
+        self.hp: int = 80        # 初期体力
         self.max_hp: int = 300   # 最大体力
         self.is_alive: bool = True
 
@@ -314,7 +314,7 @@ def main():
         if not bird.is_alive or elapsed_sec >= MAX_LIFESPAN_SEC:
             # 死亡後の調理
             # cook.is_confirm = True
-            
+
             if spawn_egg > 0:  # こうかとんを再生成する
                 birth_kokaton(screen, bg_img)
                 pg.display.update()
