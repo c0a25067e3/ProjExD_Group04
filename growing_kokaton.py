@@ -105,7 +105,7 @@ class Bird:
     """
     # Walkの時
     img0 = pg.transform.rotozoom(pg.image.load("fig/10.png"), 0, 0.3)
-    
+
     def __init__(self, xy: tuple[int, int]):
         """
         こうかとん初期化
@@ -150,7 +150,8 @@ class Bird:
 
         self.img = pg.transform.flip(self.img0, True, False)
 
-    def update_behavior(self, screen: pg.Surface):
+
+    def update_behavior(self):
         """ランダムな歩行と時々行う飛行の挙動制御"""
         self.state_timer += 1
 
@@ -184,6 +185,7 @@ class Bird:
                 self.move_vec = [random.choice(move_opts), random.choice(move_opts)]
             else:
                 self.move_vec = [0, 0]
+            self.move_vec = [random.choice(move_opts), random.choice(move_opts)]
 
     def consume_hp(self):
         """1秒ごとに実行される体力減少処理"""
@@ -199,7 +201,7 @@ class Bird:
 
     def update(self, screen: pg.Surface):
         """位置更新・描画"""
-        self.update_behavior(screen)
+        self.update_behavior()
 
         img0 = self.img0
         img = pg.transform.flip(img0, True, False)
@@ -213,7 +215,6 @@ class Bird:
             (-1, +1): img0,  # 左下
             (+1, +1): img,  # 右下
         }
-
 
         # 移動適用
         self.rct.move_ip(self.move_vec)
@@ -237,6 +238,24 @@ class Bird:
 
         screen.blit(self.img, self.rct)
 
+        # 飛行時は少し拡大・浮上表現のエフェクト
+        draw_img = self.img
+        draw_rct = self.rct.copy()
+        if self.state == "FLY":
+            draw_img = pg.transform.rotozoom(self.img, 0, 1.1)
+            draw_rct.centery -= 10  # 少し浮かす
+
+        screen.blit(draw_img, draw_rct)
+
+
+class Feeding:
+    def __init__(self):
+        """
+        こうかとんに餌やりをするクラス(追加機能)
+        """
+        self.feed = 0 #与える餌初期設定
+
+
 
 class StatusDisplay:
     """
@@ -245,7 +264,7 @@ class StatusDisplay:
     def __init__(self):
         self.font = pg.font.Font(None, 36)
 
-    def update(self, screen: pg.Surface, bird: Bird, elapsed_sec: float):
+    def update(self, screen: pg.Surface, bird: Bird, elapsed_sec: float, feeding: Feeding):
         # 1. 体力バー描画
         bar_x, bar_y = 20, 20
         bar_width, bar_height = 300, 25
@@ -275,6 +294,10 @@ class StatusDisplay:
         life_text = self.font.render(f"Lifespan: {minutes:02d}:{seconds:02d}", True, (255, 255, 255))
         screen.blit(life_text, (WIDTH - 220, 20))
 
+        #体力バーの横に与える餌の数を表示(追加機能)
+        feed_text = self.font.render(f"Feed:{feeding.feed}", True, (255, 255, 255))
+        screen.blit(feed_text, (bar_x + 350, bar_y + 5)) 
+
 
 def main():
     pg.display.set_caption("こうかとん育成ゲーム（基本機能）")
@@ -287,6 +310,7 @@ def main():
 
     spawn_egg = 1  # こうかとんの再生成回数
     game_scene = "Main"
+    feeding = Feeding()
 
     start_time = time.time()
     last_hp_decay_time = time.time()
@@ -299,6 +323,19 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
+            if event.type == pg.KEYDOWN and event.key == pg.K_f: 
+                if bird.hp <= 300:
+                    if 300-bird.hp >= feeding.feed:
+                        bird.hp += feeding.feed #Fキーを押すと体力が餌の数だけ回復
+                                                #所持している食料の数が減る(関数が分かってから記入)
+                                                #食料の所持数が分かったら、所持数より上の数は与えられないように設定
+
+            if event.type == pg.KEYDOWN and event.key == pg.K_UP:
+                feeding.feed += 1 #上キーを押すと与える餌の数が1増える
+                # if feeding.feed == "所持している食材の量":
+                #     feeding.feed += 0 #与える餌の数値が所持している食料の数値と同じだった場合、数値は上がらない
+            if event.type == pg.KEYDOWN and event.key == pg.K_DOWN:
+                feeding.feed -= 1 #下キーを押すと与える餌の数が1減る
 
 
         # --- 1秒ごとに体力を減算 ---
@@ -332,11 +369,26 @@ def main():
                 return
 
 
+        # # 描画更新
+        # screen.blit(bg_img, [0, 0])
+        # status_disp.update(screen, bird, elapsed_sec)
+        # bird.update(screen)
+        
+        # --- ゲームオーバー・寿命判定 ---
+        if not bird.is_alive or elapsed_sec >= MAX_LIFESPAN_SEC:
+            font_big = pg.font.Font(None, 80)
+            reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
+            txt = font_big.render(f"Game Over ({reason})", True, (255, 0, 0))
+            screen.blit(txt, (WIDTH // 2 - 350, HEIGHT // 2))
+            pg.display.update()
+            time.sleep(2)
+            return
+
         # 描画更新
         screen.blit(bg_img, [0, 0])
-        status_disp.update(screen, bird, elapsed_sec)
         bird.update(screen)
-        
+        status_disp.update(screen, bird, elapsed_sec, feeding)
+
         pg.display.update()
         clock.tick(FPS)
 
