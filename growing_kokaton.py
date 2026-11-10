@@ -460,7 +460,6 @@ def main():
         screen.blit(bg_img, [0, 0])
         bird.update(screen)
         status_disp.update(screen, bird, elapsed_sec, feeding)
-        status_disp.update(screen, bird, elapsed_sec)
         sleep_choice.update(screen, sleep_check, sleep_select)
 
         pg.display.update()
