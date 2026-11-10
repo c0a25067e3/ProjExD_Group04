@@ -10,12 +10,11 @@ HEIGHT = 650  # ゲームウィンドウの高さ
 FPS = 50      # フレームレート
 MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 
-# ===== ↓ミニゲーム =====
-EGG_TYPES = 6   # 卵の種類数
-EGG_INTERVAL = 15   # 卵の出現頻度
-EGG_LIFESPAN = 7   # 卵の消滅までの時間(GAMEOVER)
-EGG_GOLD_PROBABILITY = 0.01   # 金の卵の出現確率
-# ===== ↑ミニゲーム =====
+# === ↓ミニゲーム===
+EGG_TYPES =6
+EGG_INTERVAL=15
+EGG_LIFESPAN=7
+EGG_GOLD_PROBABILITY=0.01
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -106,13 +105,23 @@ def birth_kokaton(screen: pg.Surface, bg_img: pg.Surface):
     
 
 
+
 class Bird:
     """
     ゲームキャラクター（こうかとん）に関するクラス
     """
-
     img0 = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
     img = pg.transform.flip(img0, True, False)  # デフォルトのこうかとん（右向き）
+    imgs = {  # 0度から反時計回りに定義
+        (+5, 0): img,
+        (+5, -5): pg.transform.rotozoom(img, 45, 0.9),
+        (0, -5): pg.transform.rotozoom(img, 90, 0.9),
+        (-5, -5): pg.transform.rotozoom(img0, -45, 0.9),
+        (-5, 0): img0,
+        (-5, +5): pg.transform.rotozoom(img0, 45, 0.9),
+        (0, +5): pg.transform.rotozoom(img, -90, 0.9),
+        (+5, +5): pg.transform.rotozoom(img, -45, 0.9),
+    }
 
     def __init__(self, xy: tuple[int, int]):
         """
@@ -146,6 +155,27 @@ class Bird:
         elif lifespan == 2 and self.age_state != "Senior":  # 10分以上
             self.change_img(13)
             self.age_state = "Senior"
+
+    def change_img(self, num: int):
+        """こうかとん画像を切り替え，画面に転送する"""
+        if num == 10 or num == 11:
+            self.img0 = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.2)
+        elif num == 12 or num == 13:
+            self.img0 = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.3)
+        else:
+            self.img0 = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 1.0)
+
+        self.img = pg.transform.flip(self.img0, True, False)
+
+        self.hp: int = 151        # 初期体力
+        self.max_hp: int = 300   # 最大体力
+        self.is_alive: bool = True
+
+        # --- 行動パラメータ ---
+        self.state: str = "WALK" # "WALK" または "FLY"
+        self.state_timer: int = 0
+        self.move_vec: list[int] = [0, 0]
+        self.change_dir_interval: int = 50  # 方向転換の間隔（フレーム数）
 
     def change_img(self, num: int):
         """こうかとん画像を切り替え，画面に転送する"""
@@ -622,6 +652,23 @@ def main():
     restart_rect = pg.Rect(WIDTH-170,140,150,50)
 # ===== ↑ミニゲーム =====
 
+    #脱走したときの背景
+    bg_aozora = pg.image.load("fig/aozora.jpg")
+    bg_evening = pg.image.load("fig/GAMEOVER.jpg")
+
+    bird = Bird((WIDTH // 2, HEIGHT // 2))
+    status_disp = StatusDisplay()
+    clock = pg.time.Clock()
+
+    start_time = time.time()
+    last_hp_decay_time = time.time()
+
+    #脱走変数
+    now_escaping=False #脱走中
+    escaped_already=False #既に脱走したか
+    escaped_start_time=0 #脱走した時間
+
+
     while True:
         current_time = time.time()
         elapsed_sec = current_time - start_time
@@ -680,6 +727,41 @@ def main():
                 #return
 # ===== ↑ミニゲーム =====
 
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                return
+
+        # 脱走中にクリックされたら捕獲判定
+        if now_escaping and event.type == pg.MOUSEBUTTONDOWN:
+            if bird.rct.collidepoint(event.pos):
+                now_escaping = False
+                bird.state = "WALK"
+                bird.hp = max(0, bird.hp - 50)
+
+        #体力が半分以下になったら脱走
+        if bird.hp <= bird.max_hp // 2 and not escaped_already and not now_escaping:
+            now_escaping = True
+            escaped_already = True
+            escaped_start_time = time.time()
+
+        #脱走中の移動、制限時間
+        if now_escaping:
+            bird.state = "FLY"
+            fly_speed = 8
+            #止まらないで移動
+            if bird.state_timer % bird.change_dir_interval == 0:
+                move_opts = [-fly_speed,fly_speed]
+                bird.move_vec = [random.choice(move_opts), random.choice(move_opts)]
+            # 10秒過ぎても捕まえられない場合
+            if current_time - escaped_start_time >= 10.0:
+                screen.blit(bg_evening, [0, 0]) 
+                font_big = pg.font.Font(None, 80)
+                txt = font_big.render("Kokaton Escaped...", True, (255, 0, 0))
+                screen.blit(txt, (WIDTH // 2 - 150, HEIGHT // 2))
+                pg.display.update()
+                time.sleep(2)
+                return
+            
         # --- 1秒ごとに体力を減算 ---
         if current_time - last_hp_decay_time >= 1.0:
             bird.consume_hp()
@@ -725,10 +807,23 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
-
+        # 画面の切り替え
+        if now_escaping:
+            screen.blit(bg_aozora, [0, 0])  #脱走中は上空
+        else:
+            screen.blit(bg_img, [0, 0])     #通常時は通常背景
+    
+        bird.update(screen)
+        status_disp.update(screen, bird, elapsed_sec,feeding)
+    
+        #捕まえろ！表示
+        if now_escaping and (current_time - escaped_start_time <= 2.0):
+            font_big = pg.font.Font(None, 80)
+            warn_txt = font_big.render("Capture Kokaton!", True, (255, 0, 0))
+            screen.blit(warn_txt, (WIDTH // 2 - warn_txt.get_width() // 2, 80)) 
 
 # ===== ↓ミニゲーム =====
-        screen.blit(bg_img, [0, 0])   # 背景描画
+        #screen.blit(bg_img, [0, 0])   # 背景描画
         if in_minigame:
             mini_game.update(screen)   #ミニゲーム画面更新
             if mini_game.game_over:   # 画面中央に結果の表示
@@ -753,7 +848,8 @@ def main():
                     (WIDTH // 2 - all_total_text.get_width() // 2,HEIGHT // 2+10)
                 )
         else:   # ミニゲーム非表示のときは元画面を更新
-            screen.blit(bg_img,[0,0])
+            if not now_escaping :
+                screen.blit(bg_img,[0,0])
             bird.update(screen)
             status_disp.update(screen,bird,elapsed_sec,feeding)
             
@@ -774,9 +870,10 @@ def main():
             button_rect.centery - button_text.get_height() // 2))
 # ===== ↑ミニゲーム =====
         status_disp.update(screen, bird, elapsed_sec, feeding)
-        sleep_choice.update(screen, sleep_check, sleep_select)
+        sleep_choice.update(screen, sleep_check, sleep_select)    
         pg.display.update()
         clock.tick(FPS)
+
 
 if __name__ == "__main__":
     pg.init()
