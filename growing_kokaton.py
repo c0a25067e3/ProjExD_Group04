@@ -55,7 +55,7 @@ class Bird:
         self.dire = (+5, 0)
         
         # --- 体力と寿命パラメータ ---
-        self.hp: int = 200        # 初期体力
+        self.hp: int = 151        # 初期体力
         self.max_hp: int = 300   # 最大体力
         self.is_alive: bool = True
 
