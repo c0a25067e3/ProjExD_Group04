@@ -1045,7 +1045,11 @@ def main():
                 
                 # ---料理するか確認画面を表示する処理---
                 if event.key == pg.K_c and not cook.is_confirm:  # cキーが押されたand確認画面が表示されていない場合
-                    print("c")
+                    cook.egg = mini_game.total_eggs  # ここで卵の所持数をcook.eggに代入
+                    if mini_game.has_gold:  # ここで次世代こうかとんの卵を持っていなかったらcook.next_eggを0にする
+                        cook.next_egg = 1
+                    else:
+                        cook.next_egg = 0
                     cook.is_confirm = True  # 確認画面を表示する
                     cook.confirm_select = 0  # 料理の選択番号を0に(初期値yesに設定)
 
@@ -1084,7 +1088,7 @@ def main():
 
                     # ---卵選択後の処理---
                     elif event.key == pg.K_RETURN:  # enterが押された場合
-                        if cook.type_egg == 0:
+                        if (cook.type_egg == 0):
                             cook.egg -= 50  # 通常卵の所次数を50減らす
                             pg.mixer.music.load(cook.cook_sound)
                             pg.mixer.music.play(loops=-1)
@@ -1141,7 +1145,8 @@ def main():
                             cook.rct_egg.center = (200, 250)  # 普通の卵の初期位置リセット
                             cook.rct_next_egg.center = (200, 250)  # 次世代卵の初期位置リセット
 
-                            if cook.egg >= 50 and cook.next_egg >= 1:  # どちらの卵も持っていた場合
+                            # if cook.egg >= 50 and cook.next_egg >= 1:  # どちらの卵も持っていた場合
+                            if cook.egg >= 50 and cook.next_egg >= 1:
                                 cook.is_select = False  # 料理選択画面の終了
                                 cook.is_select_egg = True  # 卵選択画面を表示
                             elif cook.egg >= 50:  # 通常卵だけ50個もっていた場合
