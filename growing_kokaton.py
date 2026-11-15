@@ -1006,16 +1006,20 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_f: 
                 if bird.hp <= 300:
                     if 300-bird.hp >= feeding.feed:
-                        bird.hp += feeding.feed #Fキーを押すと体力が餌の数だけ回復
+                        if (mini_game.total_eggs >= feeding.feed):
+                            bird.hp += feeding.feed #Fキーを押すと体力が餌の数だけ回復
+                            mini_game.total_eggs -= feeding.feed  # 卵を消費
                                                 #所持している食料の数が減る(関数が分かってから記入)
                                                 #食料の所持数が分かったら、所持数より上の数は与えられないように設定
 
             if event.type == pg.KEYDOWN and event.key == pg.K_UP:
-                feeding.feed += 1 #上キーを押すと与える餌の数が1増える
+                if (mini_game.total_eggs - feeding.feed) > 0:  # 卵の所持数が0以下ならば与えるえさの数は増えない
+                    feeding.feed += 1 #上キーを押すと与える餌の数が1増える
                 # if feeding.feed == "所持している食材の量":
                 #     feeding.feed += 0 #与える餌の数値が所持している食料の数値と同じだった場合、数値は上がらない
             if event.type == pg.KEYDOWN and event.key == pg.K_DOWN:
-                feeding.feed -= 1 #下キーを押すと与える餌の数が1減る
+                if feeding.feed > 0:  # 餌は-にならない
+                    feeding.feed -= 1 #下キーを押すと与える餌の数が1減る
 
 
             #sキーが押されたとき選択画面を表示
