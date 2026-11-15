@@ -14,7 +14,7 @@ MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 EGG_TYPES =6
 EGG_INTERVAL=15
 EGG_LIFESPAN=7
-EGG_GOLD_PROBABILITY=0.01
+EGG_GOLD_PROBABILITY=0.5
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 pg.mixer.init()  # 音声の初期化
@@ -949,13 +949,12 @@ def main():
     cook_icon = pg.image.load("fig/cookアイコン.png")  # 料理アイコン(料理機能で追加)
     sleep_icon = pg.image.load("fig/sleepアイコン.png")  # 睡眠アイコン
     food_icon = pg.image.load("fig/エサやりアイコン.png")  # エサやりアイコン
- 
+
     bird = Bird((WIDTH // 2, HEIGHT // 2))
     status_disp = StatusDisplay()
     sleep_choice = Sleep()  #Sleepクラスの呼び出し
     clock = pg.time.Clock()
 
-    spawn_egg = 1  # こうかとんの再生成回数
     game_scene = "Main"
     feeding = Feeding()
 
@@ -1003,7 +1002,7 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
-            if event.type == pg.KEYDOWN and event.key == pg.K_f: 
+            if event.type == pg.KEYDOWN and event.key == pg.K_f and game_scene == "Main":  # 餌はメインの時
                 if bird.hp <= 300:
                     if 300-bird.hp >= feeding.feed:
                         if (mini_game.total_eggs >= feeding.feed):
@@ -1012,39 +1011,45 @@ def main():
                                                 #所持している食料の数が減る(関数が分かってから記入)
                                                 #食料の所持数が分かったら、所持数より上の数は与えられないように設定
 
-            if event.type == pg.KEYDOWN and event.key == pg.K_UP:
+            if event.type == pg.KEYDOWN and event.key == pg.K_UP and game_scene == "Main":
                 if (mini_game.total_eggs - feeding.feed) > 0:  # 卵の所持数が0以下ならば与えるえさの数は増えない
                     feeding.feed += 1 #上キーを押すと与える餌の数が1増える
                 # if feeding.feed == "所持している食材の量":
                 #     feeding.feed += 0 #与える餌の数値が所持している食料の数値と同じだった場合、数値は上がらない
-            if event.type == pg.KEYDOWN and event.key == pg.K_DOWN:
+            if event.type == pg.KEYDOWN and event.key == pg.K_DOWN and game_scene == "Main":
                 if feeding.feed > 0:  # 餌は-にならない
                     feeding.feed -= 1 #下キーを押すと与える餌の数が1減る
 
 
-            #sキーが押されたとき選択画面を表示
+        #sキーが押されたとき選択画面を表示
             if event.type == pg.KEYDOWN:
-                if event.key == pg.K_s and elapsed_sec >= three_time: #sキーが押されたかつ既定の時間を超えたとき
-                    sleep_check = True
-                    print(sleep_check)
-                    sleep_select = 0
-                elif sleep_check == True and event.key == pg.K_UP:  #sキーが押されてかつ上キーが押されたとき
-                    sleep_select = 0
-                elif sleep_check == True and event.key == pg.K_DOWN:  #sキーが押されてかつ下キーが押されたとき
-                    sleep_select = 1
-                elif sleep_check == True and event.key == pg.K_RETURN:  #sキーが押されてかつenterキーが押されたとき
-                    if sleep_select == 0:
-                        sleep_choice.sleep(screen, bird)  #睡眠プログラムを動かす
-                        three_time = elapsed_sec + 180
-                    sleep_check = False
+                if game_scene == "Main":
+                    if event.key == pg.K_s and elapsed_sec >= three_time: #sキーが押されたかつ既定の時間を超えたとき
+                        sleep_check = True
+                        print(sleep_check)
+                        sleep_select = 0
+                        game_scene = "sleep"
+                if game_scene == "sleep":
+                    if sleep_check == True and event.key == pg.K_UP:  #sキーが押されてかつ上キーが押されたとき
+                        sleep_select = 0
+                    elif sleep_check == True and event.key == pg.K_DOWN:  #sキーが押されてかつ下キーが押されたとき
+                        sleep_select = 1
+                    elif sleep_check == True and event.key == pg.K_RETURN:  #sキーが押されてかつenterキーが押されたとき
+                        if sleep_select == 0:
+                            sleep_choice.sleep(screen, bird)  #睡眠プログラムを動かす
+                            three_time = elapsed_sec + 180
+                        sleep_check = False
+                        game_scene = "Main"
 
                 # ---以下cook---
                 # ---卵がないよメッセージを初期化する処理---
+            if event.type == pg.KEYDOWN:
                 if cook.no_egg_messe != "":  # 卵がないよメッセージが入っている時
                     cook.no_egg_messe = ""  # 卵がないよメッセージをなくす
                 
                 # ---料理するか確認画面を表示する処理---
-                if event.key == pg.K_c and not cook.is_confirm:  # cキーが押されたand確認画面が表示されていない場合
+                if event.key == pg.K_c and not cook.is_confirm and game_scene == "Main":  # cキーが押されたand確認画面が表示されていない場合
+                    game_scene = "cook"
                     cook.egg = mini_game.total_eggs  # ここで卵の所持数をcook.eggに代入
                     if mini_game.has_gold:  # ここで次世代こうかとんの卵を持っていなかったらcook.next_eggを0にする
                         cook.next_egg = 1
@@ -1076,6 +1081,7 @@ def main():
                             cook.k_step = 0  # 調理工程数をリセット
                         else:  # noだった場合
                             cook.is_confirm = False  # そのまま確認画面を閉じる
+                            game_scene = "Main"
 
                 # ---卵を選択する処理---
                 elif cook.is_cooking and cook.is_select_egg:  # 料理モードand卵の選択画面が表示されている場合
@@ -1174,8 +1180,9 @@ def main():
                         # ---からあげの時---
                         if cook.select == 0:
                             if cook.k_step == 2:
-                                bird.is_alive = False
                                 cook.is_cooking = False  # 料理を終了
+                                game_scene = "Main"
+                                bird.is_alive = False
 
                         # ---親子丼の時---
                         elif cook.select == 1:
@@ -1184,8 +1191,9 @@ def main():
                                 cook.fin_sound.play()  # 完成した時の音楽を流す
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 3:
-                                bird.is_alive = False
                                 cook.is_cooking = False  # 料理を終了
+                                game_scene = "Main"
+                                bird.is_alive = False
 
                         # ---丸焼きの時---
                         elif cook.select == 2:
@@ -1194,8 +1202,9 @@ def main():
                                 cook.fin_sound.play()  # 完成した時の音楽を流す
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 2:
-                                bird.is_alive = False
                                 cook.is_cooking = False  # 料理を終了
+                                game_scene = "Main"
+                                bird.is_alive = False
 
                         if not cook.is_cooking:  # 料理が終了した場合
                             bird.is_inho = False  # フライパン/油から出ている状態に変更
@@ -1233,14 +1242,17 @@ def main():
         if now_escaping and event.type == pg.MOUSEBUTTONDOWN:
             if bird.rct.collidepoint(event.pos):
                 now_escaping = False
+                game_scene = "Main"
                 bird.state = "WALK"
                 bird.hp = max(0, bird.hp - 50)
 
         #体力が半分以下になったら脱走
-        if bird.hp <= bird.max_hp // 2 and not escaped_already and not now_escaping:
-            now_escaping = True
-            escaped_already = True
-            escaped_start_time = time.time()
+        if game_scene == "Main":
+            if bird.hp <= bird.max_hp // 2 and not escaped_already and not now_escaping:
+                now_escaping = True
+                game_scene = "escape"
+                escaped_already = True
+                escaped_start_time = time.time()
 
         #脱走中の移動、制限時間
         if now_escaping:
@@ -1282,7 +1294,8 @@ def main():
                 bird = Bird((WIDTH // 2, HEIGHT // 2))  # 新しいこうかとんを生成
                 time.sleep(2)
                 start_time = time.time()  # 寿命リセット
-                mini_game.has_gold == False
+                cook.is_confirm = False
+                mini_game.has_gold = False
             else:
                 font_big = pg.font.Font(None, 80)
                 reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
