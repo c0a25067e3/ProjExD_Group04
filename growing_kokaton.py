@@ -1174,6 +1174,7 @@ def main():
                         # ---からあげの時---
                         if cook.select == 0:
                             if cook.k_step == 2:
+                                bird.is_alive = False
                                 cook.is_cooking = False  # 料理を終了
 
                         # ---親子丼の時---
@@ -1183,6 +1184,7 @@ def main():
                                 cook.fin_sound.play()  # 完成した時の音楽を流す
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 3:
+                                bird.is_alive = False
                                 cook.is_cooking = False  # 料理を終了
 
                         # ---丸焼きの時---
@@ -1192,6 +1194,7 @@ def main():
                                 cook.fin_sound.play()  # 完成した時の音楽を流す
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 2:
+                                bird.is_alive = False
                                 cook.is_cooking = False  # 料理を終了
 
                         if not cook.is_cooking:  # 料理が終了した場合
@@ -1273,13 +1276,13 @@ def main():
             # 死亡後の調理
             cook.is_confirm = True
 
-            if spawn_egg > 0:  # こうかとんを再生成する
+            if mini_game.has_gold == True:  # こうかとんを再生成する
                 birth_kokaton(screen, bg_img)
                 pg.display.update()
                 bird = Bird((WIDTH // 2, HEIGHT // 2))  # 新しいこうかとんを生成
                 time.sleep(2)
                 start_time = time.time()  # 寿命リセット
-                spawn_egg -= 1
+                mini_game.has_gold == False
             else:
                 font_big = pg.font.Font(None, 80)
                 reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
