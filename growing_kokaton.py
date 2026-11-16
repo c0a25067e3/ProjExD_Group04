@@ -14,7 +14,7 @@ MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 EGG_TYPES =6
 EGG_INTERVAL=15
 EGG_LIFESPAN=7
-EGG_GOLD_PROBABILITY=0.02
+EGG_GOLD_PROBABILITY=1.0
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 pg.mixer.init()  # 音声の初期化
@@ -37,6 +37,8 @@ def birth_kokaton(screen: pg.Surface, bg_img: pg.Surface):
     """
     こうかとんが生まれる！
     """
+    aura_sound = pg.mixer.Sound("mp/オーラ1.mp3")
+    egg_sound = pg.mixer.Sound("mp/卵を割る.mp3")
     bg_black = pg.Surface((WIDTH, HEIGHT))
     pg.draw.rect(bg_black,(0,0,0),bg_black.get_rect())
     for i in range(0,100,1):
@@ -82,6 +84,9 @@ def birth_kokaton(screen: pg.Surface, bg_img: pg.Surface):
         pg.display.update()
         pg.time.delay(20)
 
+    egg_sound.play()
+    aura_sound.play()
+
     for i in range(0, WIDTH, 25):
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -103,8 +108,6 @@ def birth_kokaton(screen: pg.Surface, bg_img: pg.Surface):
         pg.time.delay(15)
 
     pg.display.update()
-    
-
 
 
 class Bird:
@@ -142,7 +145,7 @@ class Bird:
         self.dire = (+5, 0)
         
         # --- 体力と寿命パラメータ ---
-        self.hp: int = 2      # 初期体力
+        self.hp: int = 200      # 初期体力
         self.max_hp: int = 300   # 最大体力
         self.is_alive: bool = True
 
@@ -186,56 +189,43 @@ class Bird:
         # 一定確率で飛行モードと歩行モードの切り替え
         if self.state == "WALK":
             if random.random() < 0.001:  # 約0.1%の確率で飛行開始
-                # if self.age_state == "Child":
-                #     self.change_img(11)
-                # elif self.age_state == "Adult":
-                #     self.change_img(3)
-                # elif self.age_state == "Senior":
-                #     self.change_img(12)
                 self.state = "FLY"
                 self.state_timer = 0
         elif self.state == "FLY":
             if self.state_timer > 150:   # 3秒間（150フレーム）飛んだら歩行に戻る
-                # if self.age_state == "Child":
-                #     self.change_img(10)
-                # elif self.age_state == "Adult":
-                #     self.change_img(5)
-                # elif self.age_state == "Senior":
-                #     self.change_img(13)
                 self.state = "WALK"
                 self.state_timer = 0
         # 基本の画像の入れ替え
-            if self.state == "FLY":
-                if self.age_state == "Child":
-                    self.change_img(11)
-                elif self.age_state == "Adult":
-                    self.change_img(3)
-                elif self.age_state == "Senior":
-                    self.change_img(12)
-            if self.state == "WALK":
-                if self.age_state == "Child":
-                    self.change_img(10)
-                elif self.age_state == "Adult":
-                    self.change_img(5)
-                elif self.age_state == "Senior":
-                    self.change_img(13)
+        if self.state == "FLY":
+            if self.age_state == "Child":
+                self.change_img(11)
+            elif self.age_state == "Adult":
+                self.change_img(3)
+            elif self.age_state == "Senior":
+                self.change_img(12)
+        if self.state == "WALK":
+            if self.age_state == "Child":
+                self.change_img(10)
+            elif self.age_state == "Adult":
+                self.change_img(5)
+            elif self.age_state == "Senior":
+                self.change_img(13)
             
 
         # ランダム移動の方向切り替え
         if self.state_timer % self.change_dir_interval == 0:
-            speed = 8 if self.state == "FLY" else 4
+            speed = 4 if self.state == "FLY" else 2
             move_opts = [-speed, 0, speed]
             if random.randint(1,3) == 1 or self.state == "FLY":
                 self.move_vec = [random.choice(move_opts), random.choice(move_opts)]
             else:
                 self.move_vec = [0, 0]
-            self.move_vec = [random.choice(move_opts), random.choice(move_opts)]
 
     def consume_hp(self,game_scene: str):
         """1秒ごとに実行される体力減少処理"""
         if not self.is_alive:
             return
-        if game_scene == "Main":  # Mainの時だけ体力を減らす
+        if game_scene == "Main" or game_scene == "minigame":  # Mainとミニゲームの時だけ体力を減らす
             # 飛行時は2減少、歩行時は1減少
             loss = 2 if self.state == "FLY" else 1
             self.hp = max(0, self.hp - loss)
@@ -293,8 +283,6 @@ class Bird:
             vy = 1 if self.move_vec[1] > 0 else (-1 if self.move_vec[1] < 0 else 0)
             if (vx, vy) in imgs:
                 self.img = imgs[(vx, vy)]
-
-        screen.blit(self.img, self.rct)
 
         # 飛行時は少し拡大・浮上表現のエフェクト
         draw_img = self.img
@@ -422,6 +410,10 @@ EGG_IMAGES = [   # 卵画像の読み込みと縮小
     pg.transform.rotozoom(pg.image.load(f"fig/egg_{color}.png"), 0, 0.1)
     for color in ["blue", "brown", "green", "orange", "purple", "red"]
 ]
+Rotten_EGG_IMAGES = [   # 腐った卵画像の読み込みと縮小
+    pg.transform.rotozoom(pg.image.load(f"fig/egg_{color}_rotten.png"), 0, 0.05)
+    for color in ["blue", "brown", "green", "orange", "purple", "red"]
+]
 GOLD_EGG_IMAGE = pg.transform.rotozoom(
     pg.image.load("fig/egg_gold.png"), 0, 0.1
 )
@@ -449,7 +441,11 @@ class Egg:
             self.rct.y -= self.speed   # 上に移動
         screen.blit(self.img,self.rct)
     def is_rotten(self) -> bool:   # 卵の生成から指定秒数経過でTrueを返し腐敗判定
-        return time.time()-self.start_time >= EGG_LIFESPAN
+        if (time.time()-self.start_time >= EGG_LIFESPAN) and not self.is_gold:
+            self.img = Rotten_EGG_IMAGES[self.egg_type - 1]
+            return True
+        else:
+            return False
 # ===== ↑ミニゲーム =====
 
 # ===== ↓ミニゲーム =====
@@ -584,8 +580,10 @@ class EggMiniGame:
                 egg.has_entered_screen = True
             if egg.has_entered_screen:   # 1度画面に入った卵が画面外に出たらリストから削除
                 if egg.rct.bottom < 0 or egg.rct.top > HEIGHT:
-                    self.eggs.remove(egg)
-                    continue
+                    if egg.egg_type != 7:
+                        egg.direction *= -1
+                        # self.eggs.remove(egg)
+                        continue
             if egg.has_entered_screen and egg.is_rotten():   # 画面内の卵が腐ったらGAMEOVER
                 self.game_over = True
                 return
@@ -667,8 +665,6 @@ class Cook():
         self.select = 0  # 選択中の料理番号を管理
         self.k_step = 0  # 料理工程数の管理
         self.type_egg = 0  # 親子丼に使用する卵の種類(0:通常の卵を使用　1:次世代卵を使用する)
-        self.egg = 100  # 通常卵の仮置き
-        self.next_egg = 1  # 次世代卵の仮置き
 
         self.recip = ["Kara-age", "Oyako-Don", "Maru-yaki"]  # 料理リスト
         self.li_egg = ["Normal egg", "Next Generation egg"]  # 卵のリスト
@@ -924,7 +920,7 @@ class Cook():
                         if bird.rct.colliderect(self.rct_h):  # こうかとんとフライパンが重なっていた場合
                             self.k_step = 1
                             bird.rct.center = self.rct_h.center  # こうかとんの中心座標をフライパンの中心座標に変更
-                            bird.is_inho = True  # こうかとんふが油に入っている状態に変更
+                            bird.is_inho = True  # こうかとんが油に入っている状態に変更
 
                 elif self.item == "egg":
                     if self.rct_egg.colliderect(bird.rct):  # 卵と鳥が重なっていた場合
@@ -962,7 +958,7 @@ class Cook():
 
 
 def main():
-    pg.display.set_caption("こうかとん育成ゲーム（基本機能）")
+    pg.display.set_caption("こうかとん育成ゲーム")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")
     cook_icon = pg.image.load("fig/cookアイコン.png")  # 料理アイコン(料理機能で追加)
@@ -1205,6 +1201,7 @@ def main():
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 3:
                                 cook.is_cooking = False  # 料理を終了
+                                mini_game.total_eggs = cook.egg
                                 if cook.next_egg == 1:
                                     mini_game.has_gold = True
                                 else:
@@ -1314,9 +1311,10 @@ def main():
                 start_time = time.time()  # 寿命リセット
                 cook.is_confirm = False
                 mini_game.has_gold = False
-            elif not bird.is_cooked_once:
+            elif (not bird.is_cooked_once) and not (cook.is_cooking):
                 cook.is_confirm = True
-            else:
+                game_scene = "cook"
+            elif game_scene == "Main":
                 font_big = pg.font.Font(None, 80)
                 reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
                 txt = font_big.render(f"Game Over ({reason})", True, (255, 0, 0))
@@ -1425,7 +1423,6 @@ def main():
         sleep_choice.update(screen, sleep_check, sleep_select)
         pg.display.update()
         clock.tick(FPS)
-        print(len(mini_game.eggs))
 
 
 if __name__ == "__main__":
