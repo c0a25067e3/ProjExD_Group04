@@ -14,7 +14,7 @@ MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 EGG_TYPES =6
 EGG_INTERVAL=15
 EGG_LIFESPAN=7
-EGG_GOLD_PROBABILITY=0.01
+EGG_GOLD_PROBABILITY=0.02
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 pg.mixer.init()  # 音声の初期化
@@ -142,7 +142,7 @@ class Bird:
         self.dire = (+5, 0)
         
         # --- 体力と寿命パラメータ ---
-        self.hp: int = 200      # 初期体力
+        self.hp: int = 2      # 初期体力
         self.max_hp: int = 300   # 最大体力
         self.is_alive: bool = True
 
@@ -979,7 +979,7 @@ def main():
 
     start_time = time.time()
     last_hp_decay_time = time.time()
-    three_time = 1 #3分経過を計る
+    three_time = 180 #3分経過を計る
     sleep_check = False  #sキーが押されたかどうか
     sleep_select = 0  #0：”Yse”ボタンを選択
 
@@ -1069,11 +1069,6 @@ def main():
                 # ---料理するか確認画面を表示する処理---
                 if event.key == pg.K_c and not cook.is_confirm and game_scene == "Main":  # cキーが押されたand確認画面が表示されていない場合
                     game_scene = "cook"
-                    cook.egg = mini_game.total_eggs  # ここで卵の所持数をcook.eggに代入
-                    if mini_game.has_gold:  # ここで次世代こうかとんの卵を持っていなかったらcook.next_eggを0にする
-                        cook.next_egg = 1
-                    else:
-                        cook.next_egg = 0
                     cook.is_confirm = True  # 確認画面を表示する
                     cook.confirm_select = 0  # 料理の選択番号を0に(初期値yesに設定)
 
@@ -1090,7 +1085,6 @@ def main():
                     elif event.key == pg.K_RETURN:  # enterが押された場合
                         if cook.confirm_select == 0:  # 料理する(yesだった)場合
                             cook.st_sound.play()  # 「どう料理してやろうかのう.mp3」を流す
-                            bird.is_cooked_once = True  # こうかとんが一度料理されたことを記録
                             cook.is_confirm = False  # 確認画面を終了
                             cook.is_cooking = True  # 料理モードを開始する
                             cook.is_select = True  # 料理の選択画面を表示
@@ -1199,6 +1193,7 @@ def main():
                         if cook.select == 0:
                             if cook.k_step == 2:
                                 cook.is_cooking = False  # 料理を終了
+                                bird.is_cooked_once = True  # こうかとんが一度料理されたことを記録
                                 game_scene = "Main"
                                 bird.is_alive = False
 
@@ -1214,6 +1209,7 @@ def main():
                                     mini_game.has_gold = True
                                 else:
                                     mini_game.has_gold = False
+                                bird.is_cooked_once = True  # こうかとんが一度料理されたことを記録
                                 game_scene = "Main"
                                 bird.is_alive = False
 
@@ -1225,6 +1221,7 @@ def main():
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 2:
                                 cook.is_cooking = False  # 料理を終了
+                                bird.is_cooked_once = True  # こうかとんが一度料理されたことを記録
                                 game_scene = "Main"
                                 bird.is_alive = False
 
@@ -1308,7 +1305,6 @@ def main():
         # --- ゲームオーバー・寿命判定 ---
         if not bird.is_alive or elapsed_sec >= MAX_LIFESPAN_SEC:
             # 死亡後の調理
-            cook.is_confirm = True
 
             if mini_game.has_gold == True:  # こうかとんを再生成する
                 birth_kokaton(screen, bg_img)
@@ -1318,6 +1314,8 @@ def main():
                 start_time = time.time()  # 寿命リセット
                 cook.is_confirm = False
                 mini_game.has_gold = False
+            elif not bird.is_cooked_once:
+                cook.is_confirm = True
             else:
                 font_big = pg.font.Font(None, 80)
                 reason = "Died of Exhaustion..." if not bird.is_alive else "Reached Lifespan End"
@@ -1345,6 +1343,11 @@ def main():
             status_disp.update(screen, bird, elapsed_sec,feeding, mini_game.total_eggs)
 
         if cook.is_confirm:  # 本当に料理するか確認画面の場合(料理機能で追加)
+            cook.egg = mini_game.total_eggs  # ここで卵の所持数をcook.eggに代入
+            if mini_game.has_gold:  # ここで次世代こうかとんの卵を持っていなかったらcook.next_eggを0にする
+                cook.next_egg = 1
+            else:
+                cook.next_egg = 0
             text = cook.font.render("Hontou ni suru?", True, (255, 255, 255))
             text_rct = text.get_rect(center=(WIDTH//2, 150))
             screen.blit(text, text_rct)
@@ -1422,6 +1425,7 @@ def main():
         sleep_choice.update(screen, sleep_check, sleep_select)
         pg.display.update()
         clock.tick(FPS)
+        print(len(mini_game.eggs))
 
 
 if __name__ == "__main__":
