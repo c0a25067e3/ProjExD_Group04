@@ -111,7 +111,7 @@ class Bird:
     """
     ゲームキャラクター（こうかとん）に関するクラス
     """
-    img0 = pg.transform.rotozoom(pg.image.load("fig/11.png"), 0, 0.2)
+    img0 = pg.transform.rotozoom(pg.image.load("fig/10.png"), 0, 0.2)
     img = pg.transform.flip(img0, True, False)  # デフォルトのこうかとん（右向き）
     imgs = {  # 0度から反時計回りに定義
         (+5, 0): img,
@@ -186,24 +186,40 @@ class Bird:
         # 一定確率で飛行モードと歩行モードの切り替え
         if self.state == "WALK":
             if random.random() < 0.001:  # 約0.1%の確率で飛行開始
+                # if self.age_state == "Child":
+                #     self.change_img(11)
+                # elif self.age_state == "Adult":
+                #     self.change_img(3)
+                # elif self.age_state == "Senior":
+                #     self.change_img(12)
+                self.state = "FLY"
+                self.state_timer = 0
+        elif self.state == "FLY":
+            if self.state_timer > 150:   # 3秒間（150フレーム）飛んだら歩行に戻る
+                # if self.age_state == "Child":
+                #     self.change_img(10)
+                # elif self.age_state == "Adult":
+                #     self.change_img(5)
+                # elif self.age_state == "Senior":
+                #     self.change_img(13)
+                self.state = "WALK"
+                self.state_timer = 0
+        # 基本の画像の入れ替え
+            if self.state == "FLY":
                 if self.age_state == "Child":
                     self.change_img(11)
                 elif self.age_state == "Adult":
                     self.change_img(3)
                 elif self.age_state == "Senior":
                     self.change_img(12)
-                self.state = "FLY"
-                self.state_timer = 0
-        elif self.state == "FLY":
-            if self.state_timer > 150:   # 3秒間（150フレーム）飛んだら歩行に戻る
+            if self.state == "WALK":
                 if self.age_state == "Child":
                     self.change_img(10)
                 elif self.age_state == "Adult":
                     self.change_img(5)
                 elif self.age_state == "Senior":
                     self.change_img(13)
-                self.state = "WALK"
-                self.state_timer = 0
+            
 
         # ランダム移動の方向切り替え
         if self.state_timer % self.change_dir_interval == 0:
@@ -215,14 +231,14 @@ class Bird:
                 self.move_vec = [0, 0]
             self.move_vec = [random.choice(move_opts), random.choice(move_opts)]
 
-    def consume_hp(self):
+    def consume_hp(self,game_scene: str):
         """1秒ごとに実行される体力減少処理"""
         if not self.is_alive:
             return
-
-        # 飛行時は2減少、歩行時は1減少
-        loss = 2 if self.state == "FLY" else 1
-        self.hp = max(0, self.hp - loss)
+        if game_scene == "Main":  # Mainの時だけ体力を減らす
+            # 飛行時は2減少、歩行時は1減少
+            loss = 2 if self.state == "FLY" else 1
+            self.hp = max(0, self.hp - loss)
 
         if self.hp <= 0:
             self.is_alive = False
@@ -298,7 +314,6 @@ class Feeding:
         self.feed = 0 #与える餌初期設定
 
 
-
 class StatusDisplay:
     """
     体力バー、残り寿命、ステータス描画クラス
@@ -306,7 +321,7 @@ class StatusDisplay:
     def __init__(self):
         self.font = pg.font.Font(None, 36)
 
-    def update(self, screen: pg.Surface, bird: Bird, elapsed_sec: float, feeding: Feeding):
+    def update(self, screen: pg.Surface, bird: Bird, elapsed_sec: float, feeding: Feeding, egg_count: int):
         # 1. 体力バー描画
         bar_x, bar_y = 20, 20
         bar_width, bar_height = 300, 25
@@ -338,7 +353,11 @@ class StatusDisplay:
 
         #体力バーの横に与える餌の数を表示(追加機能)
         feed_text = self.font.render(f"Feed:{feeding.feed}", True, (255, 255, 255))
-        screen.blit(feed_text, (bar_x + 350, bar_y + 5)) 
+        screen.blit(feed_text, (bar_x + 350, bar_y + 5))
+
+        # 持ってる卵の数を表示
+        eggs_count_txt = self.font.render(f"Eggs:{egg_count}",True,(255,255,255))
+        screen.blit(eggs_count_txt,(feed_text.get_rect().right + 400, bar_y + 5))
 
 class Sleep:
     
@@ -1151,8 +1170,7 @@ def main():
                             cook.rct_egg.center = (200, 250)  # 普通の卵の初期位置リセット
                             cook.rct_next_egg.center = (200, 250)  # 次世代卵の初期位置リセット
 
-                            # if cook.egg >= 50 and cook.next_egg >= 1:  # どちらの卵も持っていた場合
-                            if cook.egg >= 50 and cook.next_egg >= 1:
+                            if cook.egg >= 50 and cook.next_egg >= 1:  # どちらの卵も持っていた場合
                                 cook.is_select = False  # 料理選択画面の終了
                                 cook.is_select_egg = True  # 卵選択画面を表示
                             elif cook.egg >= 50:  # 通常卵だけ50個もっていた場合
@@ -1192,6 +1210,10 @@ def main():
                                 pg.mixer.music.stop()  # BGMを止める
                             elif cook.k_step == 3:
                                 cook.is_cooking = False  # 料理を終了
+                                if cook.next_egg == 1:
+                                    mini_game.has_gold = True
+                                else:
+                                    mini_game.has_gold = False
                                 game_scene = "Main"
                                 bird.is_alive = False
 
@@ -1216,7 +1238,7 @@ def main():
                 if event.type == pg.MOUSEBUTTONUP or event.type == pg.MOUSEBUTTONDOWN or event.type == pg.MOUSEMOTION:  # マウス操作がされた場合
                     cook.mouse(event, bird)  # mouseを呼び出して実行
 
-# ===== ↓ミニゲーム =====            
+# ===== ↓ミニゲーム =====
             if event.type == pg.MOUSEBUTTONDOWN:
                 if event.button == 1:   # 左クリックを検出
                     if button_rect.collidepoint(event.pos):
@@ -1239,11 +1261,11 @@ def main():
                 return
 
         # 脱走中にクリックされたら捕獲判定
-        if now_escaping and event.type == pg.MOUSEBUTTONDOWN:
+        if now_escaping and event.type == pg.MOUSEBUTTONDOWN and game_scene == "escape":
             if bird.rct.collidepoint(event.pos):
                 now_escaping = False
-                game_scene = "Main"
                 bird.state = "WALK"
+                game_scene = "Main"
                 bird.hp = max(0, bird.hp - 50)
 
         #体力が半分以下になったら脱走
@@ -1275,7 +1297,7 @@ def main():
         # --- 1秒ごとに体力を減算 ---
         if not bird.is_cooked_once:  # こうかとんが一度も調理されたことがなかったら体力減算(調理機能で追加)
             if current_time - last_hp_decay_time >= 1.0:
-                bird.consume_hp()
+                bird.consume_hp(game_scene)
                 last_hp_decay_time = current_time
 
         if elapsed_sec // 300 == 1:
@@ -1320,7 +1342,7 @@ def main():
         else:
             screen.blit(bg_img, [0, 0])
             bird.update(screen)
-            status_disp.update(screen, bird, elapsed_sec,feeding)
+            status_disp.update(screen, bird, elapsed_sec,feeding, mini_game.total_eggs)
 
         if cook.is_confirm:  # 本当に料理するか確認画面の場合(料理機能で追加)
             text = cook.font.render("Hontou ni suru?", True, (255, 255, 255))
@@ -1340,11 +1362,12 @@ def main():
                 screen.blit(text, text_rct)
 
         if not bird.is_cooked_once:  # こうかとんが一度も料理されていない場合(料理機能で追加)
-            status_disp.update(screen, bird, elapsed_sec, feeding)
+            status_disp.update(screen, bird, elapsed_sec, feeding, mini_game.total_eggs)
 
 # ===== ↓ミニゲーム =====
         #screen.blit(bg_img, [0, 0])   # 背景描画
         if in_minigame:
+            game_scene = "minigame"
             mini_game.update(screen)   #ミニゲーム画面更新
             if mini_game.game_over:   # 画面中央に結果の表示
                 txt = button_font.render("GAME OVER", True, (255, 0, 0))
@@ -1368,11 +1391,13 @@ def main():
                     (WIDTH // 2 - all_total_text.get_width() // 2,HEIGHT // 2+10)
                 )
         else:   # ミニゲーム非表示のときは元画面を更新
+            if game_scene == "minigame":
+                game_scene = "Main"
             if not cook.is_cooking and not cook.is_confirm:
                 if not now_escaping :
                     screen.blit(bg_img,[0,0])
                 bird.update(screen)
-                status_disp.update(screen,bird,elapsed_sec,feeding)
+                status_disp.update(screen,bird,elapsed_sec,feeding,mini_game.total_eggs)
                 screen.blit(cook_icon, (WIDTH-100, HEIGHT-100))
                 screen.blit(sleep_icon, (WIDTH-200, HEIGHT-100))
                 screen.blit(food_icon, (WIDTH-300, HEIGHT-100))
@@ -1393,8 +1418,8 @@ def main():
             button_rect.centerx - button_text.get_width() // 2,
             button_rect.centery - button_text.get_height() // 2))
 # ===== ↑ミニゲーム =====
-        status_disp.update(screen, bird, elapsed_sec, feeding)
-        sleep_choice.update(screen, sleep_check, sleep_select)    
+        status_disp.update(screen, bird, elapsed_sec, feeding,mini_game.total_eggs)
+        sleep_choice.update(screen, sleep_check, sleep_select)
         pg.display.update()
         clock.tick(FPS)
 
