@@ -14,7 +14,7 @@ MAX_LIFESPAN_SEC = 15 * 60  # 寿命：15分（900秒）
 EGG_TYPES =6
 EGG_INTERVAL=15
 EGG_LIFESPAN=7
-EGG_GOLD_PROBABILITY=1.0
+EGG_GOLD_PROBABILITY=0.02
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 pg.mixer.init()  # 音声の初期化
