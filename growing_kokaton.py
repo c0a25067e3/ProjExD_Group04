@@ -439,10 +439,11 @@ class Egg:
             self.rct.y += self.speed   # 下に移動
         else:
             self.rct.y -= self.speed   # 上に移動
+        if (time.time()-self.start_time + 2 >= EGG_LIFESPAN) and not self.is_gold:
+            self.img = Rotten_EGG_IMAGES[self.egg_type - 1]
         screen.blit(self.img,self.rct)
     def is_rotten(self) -> bool:   # 卵の生成から指定秒数経過でTrueを返し腐敗判定
         if (time.time()-self.start_time >= EGG_LIFESPAN) and not self.is_gold:
-            self.img = Rotten_EGG_IMAGES[self.egg_type - 1]
             return True
         else:
             return False
