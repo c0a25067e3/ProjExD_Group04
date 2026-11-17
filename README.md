@@ -59,7 +59,7 @@
 
 '
 <br>
-<img src="fig/スクリーンショット赤ちゃん.png" width="30%" height="185">
+<img src="fig/スクリーンショット赤ちゃん.png" width="30%">
 <img src="fig/スクリーンショットふつう.png" width="30%">
 <img src="fig/スクリーンショット大人.png" width="30%">
 '
